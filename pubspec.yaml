@@ -1,6 +1,6 @@
 name: just_dart
 description: Shared Dart utilities for Just Ecosystem.
-version: 0.1.0
+version: 0.2.0
 homepage: https://github.com/just-unknown-dev/just-dart
 repository: https://github.com/just-unknown-dev/just-dart
 issue_tracker: https://github.com/just-unknown-dev/just-dart/issues
@@ -13,6 +13,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  # Only for Matrix4: the 64-bit class Flutter itself exports. Every other
+  # math type here is this package's own.
+  vector_math: ^2.1.4
 
 dev_dependencies:
   lints: ^6.0.0

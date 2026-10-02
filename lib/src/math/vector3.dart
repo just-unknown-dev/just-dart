@@ -120,6 +120,17 @@ class Vector3 {
     x * other.y - y * other.x,
   );
 
+  /// Write `this × other` into [out] without allocating. Safe when [out]
+  /// is `this` or [other].
+  void crossInto(Vector3 other, Vector3 out) {
+    final cx = y * other.z - z * other.y;
+    final cy = z * other.x - x * other.z;
+    final cz = x * other.y - y * other.x;
+    out.x = cx;
+    out.y = cy;
+    out.z = cz;
+  }
+
   /// Distance squared to [other].
   double distanceToSquared(Vector3 other) {
     final dx = x - other.x;
