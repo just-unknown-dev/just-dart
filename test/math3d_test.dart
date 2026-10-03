@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/painting.dart' show Rect;
 import 'package:just_dart/just_dart.dart';
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:vector_math/vector_math_64.dart' as vm;
 
 const _eps = 1e-9;
@@ -123,21 +123,97 @@ void main() {
       s.setSlerp(a, b, 1);
       expect(s.sameRotation(b), isTrue);
       s.setSlerp(a, b, 0.5);
+      expect(s.sameRotation(Quaternion.identity()..setRotationZ(0.5)), isTrue);
+    });
+
+    test('rotation matrix elements convert back, on every branch', () {
+      final axes = [
+        Vector3(1, 0, 0), // half turns here hit the x, y and z branches
+        Vector3(0, 1, 0),
+        Vector3(0, 0, 1),
+        Vector3(1, 1, 0),
+        Vector3(0.2, -1, 0.7),
+      ];
+      for (final axis in axes) {
+        for (final angle in [math.pi, 3.0, 2.5, 0.3]) {
+          final q = Quaternion.axisAngle(axis, angle);
+          final m = vm.Matrix4.identity()
+            ..setFromTrs(Vector3.zero(), q, Vector3(1, 1, 1));
+          final s = m.storage;
+          final back = Quaternion.identity()
+            ..setFromRotationElements(
+              s[0],
+              s[4],
+              s[8],
+              s[1],
+              s[5],
+              s[9],
+              s[2],
+              s[6],
+              s[10],
+            );
+          expect(back.sameRotation(q), isTrue, reason: '$axis $angle');
+        }
+      }
+    });
+
+    test('Euler angles stay exact near ±90° without a hint', () {
+      // 89.98° used to read back as 90°: x snapped to the pole 4.5e-4 rad
+      // early.
+      final out = Vector3.zero();
+      final deg = math.pi / 180;
+      Quaternion.euler(89.98 * deg, 0.3, 0.2).eulerInto(out);
+      _expectVec(out, 89.98 * deg, 0.3, 0.2, 1e-9);
+
+      final rnd = math.Random(3);
+      for (var i = 0; i < 2000; i++) {
+        final pole = (i.isEven ? 1 : -1) * math.pi / 2;
+        final ex = pole + (rnd.nextDouble() - 0.5) * 2e-3;
+        final q = Quaternion.euler(ex, rnd.nextDouble(), rnd.nextDouble());
+        q.eulerInto(out);
+        final back = Quaternion.euler(out.x, out.y, out.z);
+        expect(back.sameRotation(q, 1e-9), isTrue, reason: '$q -> $out');
+      }
+    });
+
+    test('any hint gives angles that describe the rotation', () {
+      final rnd = math.Random(5);
+      double r(double k) => (rnd.nextDouble() - 0.5) * k;
+      final out = Vector3.zero();
+      for (var i = 0; i < 5000; i++) {
+        final nearPole = i % 4 == 0;
+        final ex = nearPole
+            ? (i.isEven ? 1 : -1) * (math.pi / 2 + r(1e-6))
+            : r(12);
+        final q = Quaternion.euler(ex, r(12), r(12));
+        q.eulerInto(out, hint: Vector3(r(20), r(20), r(20)));
+        final back = Quaternion.euler(out.x, out.y, out.z);
+        expect(back.sameRotation(q, 1e-7), isTrue, reason: '$q -> $out');
+      }
+    });
+
+    test('slerp takes the short way round', () {
+      final a = Quaternion.identity();
+      final b = Quaternion.identity()..setRotationZ(1.0);
+      final negB = Quaternion(-b.x, -b.y, -b.z, -b.w);
+      final s = Quaternion.identity()..setSlerp(a, negB, 0.5);
+      expect(s.sameRotation(Quaternion.identity()..setRotationZ(0.5)), isTrue);
+      // Nearly parallel: the lerp fallback.
+      s.setSlerp(a, Quaternion.identity()..setRotationZ(0.01), 0.5);
       expect(
-        s.sameRotation(Quaternion.identity()..setRotationZ(0.5)),
+        s.sameRotation(Quaternion.identity()..setRotationZ(0.005)),
         isTrue,
       );
     });
 
-    test('rotation matrix elements convert back', () {
-      final q = Quaternion.euler(0.5, 1.2, -2.0);
-      final m = vm.Matrix4.identity()
-        ..setFromTrs(Vector3.zero(), q, Vector3(1, 1, 1));
-      final s = m.storage;
-      final back = Quaternion.identity()
-        ..setFromRotationElements(
-          s[0], s[4], s[8], s[1], s[5], s[9], s[2], s[6], s[10]);
-      expect(back.sameRotation(q), isTrue);
+    test('equality is exact, sameRotation is not', () {
+      final q = Quaternion.euler(0.1, 0.2, 0.3);
+      final neg = Quaternion(-q.x, -q.y, -q.z, -q.w);
+      expect(q == Quaternion.copy(q), isTrue);
+      expect(q == neg, isFalse);
+      expect(q.sameRotation(neg), isTrue);
+      expect(Quaternion.identity().isIdentity(), isTrue);
+      expect(Quaternion.identity().toString(), startsWith('Quaternion('));
     });
   });
 
@@ -199,8 +275,7 @@ void main() {
     });
 
     test('perspective y-down: near → 0, far → 1, y stays down', () {
-      final m = Matrix4.zero()
-        ..setPerspectiveYDown(math.pi / 2, 2.0, 1, 100);
+      final m = Matrix4.zero()..setPerspectiveYDown(math.pi / 2, 2.0, 1, 100);
       final v = Vector3(0, 0, 1);
       m.transformPointInto(v, v);
       expect(v.z, _near(0));
@@ -211,6 +286,31 @@ void main() {
       v.setValues(0, 10, 10);
       m.transformPointInto(v, v);
       expect(v.y, _near(1));
+    });
+
+    test('degenerate projections fail fast in debug builds', () {
+      final m = Matrix4.zero();
+      expect(
+        () => m.setOrthographicYDown(1, 1, 0, 10, 0, 10),
+        throwsA(isA<AssertionError>()),
+      );
+      expect(
+        () => m.setPerspectiveYDown(math.pi / 2, 1, 0, 100),
+        throwsA(isA<AssertionError>()),
+      );
+      expect(
+        () => m.setPerspectiveYDown(math.pi, 1, 1, 100),
+        throwsA(isA<AssertionError>()),
+      );
+    });
+
+    test('directions ignore translation, translation reads back', () {
+      final m = Matrix4.zero()..setFromPlanarTrs(5, 6, 7, math.pi / 2, 1, 1, 1);
+      final d = Vector3(1, 0, 0);
+      m.transformDirectionInto(d, d);
+      _expectVec(d, 0, 1, 0);
+      m.translationInto(d);
+      _expectVec(d, 5, 6, 7);
     });
   });
 
@@ -242,8 +342,7 @@ void main() {
       ray.atInto(10, hit);
       _expectVec(hit, 5, 5, 0);
 
-      final box = Aabb3()
-        ..setValues(0, 0, -1, 10, 10, 1);
+      final box = Aabb3()..setValues(0, 0, -1, 10, 10, 1);
       expect(ray.intersectAabb(box), _near(9));
       ray.origin.setValues(20, 20, -10);
       expect(ray.intersectAabb(box), isNull);
@@ -253,16 +352,89 @@ void main() {
     });
 
     test('a frustum from an ortho camera keeps inside boxes only', () {
-      final vp = Matrix4.zero()
-        ..setOrthographicYDown(0, 100, 0, 100, -10, 10);
+      final vp = Matrix4.zero()..setOrthographicYDown(0, 100, 0, 100, -10, 10);
       final f = Frustum()..setFromViewProjection(vp);
-      expect(f.intersectsAabb(Aabb3()..setValues(10, 10, 0, 20, 20, 0)),
-          isTrue);
-      expect(f.intersectsAabb(Aabb3()..setValues(110, 10, 0, 120, 20, 0)),
-          isFalse);
-      expect(f.intersectsAabb(Aabb3()..setValues(90, 90, 0, 120, 120, 0)),
-          isTrue);
+      expect(
+        f.intersectsAabb(Aabb3()..setValues(10, 10, 0, 20, 20, 0)),
+        isTrue,
+      );
+      expect(
+        f.intersectsAabb(Aabb3()..setValues(110, 10, 0, 120, 20, 0)),
+        isFalse,
+      );
+      expect(
+        f.intersectsAabb(Aabb3()..setValues(90, 90, 0, 120, 120, 0)),
+        isTrue,
+      );
       expect(f.containsPoint(Vector3(50, 50, 20)), isFalse);
+      expect(f.planes.length, 6);
+      expect(() => f.planes.add(Plane()), throwsUnsupportedError);
+    });
+
+    test('a perspective frustum culls behind, before near and past far', () {
+      final vp = Matrix4.zero()..setPerspectiveYDown(math.pi / 2, 1, 1, 100);
+      final f = Frustum()..setFromViewProjection(vp);
+      expect(f.containsPoint(Vector3(0, 0, 50)), isTrue);
+      expect(f.containsPoint(Vector3(0, 0, -5)), isFalse);
+      expect(f.containsPoint(Vector3(0, 0, 0.5)), isFalse);
+      expect(f.containsPoint(Vector3(0, 0, 101)), isFalse);
+      expect(f.containsPoint(Vector3(60, 0, 50)), isFalse);
+      expect(
+        f.intersectsAabb(Aabb3()..setValues(-1, -1, -10, 1, 1, -5)),
+        isFalse,
+      );
+      expect(
+        f.intersectsAabb(Aabb3()..setValues(-1, -1, -10, 1, 1, 5)),
+        isTrue,
+      );
+      expect(f.intersectsAabb(Aabb3()), isFalse);
+    });
+
+    test('transformInto matches the eight transformed corners', () {
+      final rnd = math.Random(9);
+      double r() => (rnd.nextDouble() - 0.5) * 10;
+      final box = Aabb3();
+      final want = Aabb3();
+      final p = Vector3.zero();
+      for (var i = 0; i < 200; i++) {
+        final m = Matrix4.zero()
+          ..setFromTrs(
+            Vector3(r(), r(), r()),
+            Quaternion.euler(r(), r(), r()),
+            Vector3(r(), r(), r()),
+          );
+        box.setValues(-1, -2, -3, 2, 1, 4);
+        want.setEmpty();
+        for (final x in [box.min.x, box.max.x]) {
+          for (final y in [box.min.y, box.max.y]) {
+            for (final z in [box.min.z, box.max.z]) {
+              p.setValues(x, y, z);
+              m.transformPointInto(p, p);
+              want.addPoint(p);
+            }
+          }
+        }
+        box.transformInto(m, box);
+        _expectVec(box.min, want.min.x, want.min.y, want.min.z);
+        _expectVec(box.max, want.max.x, want.max.y, want.max.z);
+      }
+    });
+
+    test('a ray starting inside a box hits it at 0', () {
+      final ray = Ray3()..setValues(5, 5, 0, 1, 0, 0);
+      expect(ray.intersectAabb(Aabb3()..setValues(0, 0, -1, 10, 10, 1)), 0);
+      expect(ray.intersectAabb(Aabb3()), isNull);
+      expect(ray.intersectPlane(Plane()), isNull); // parallel to z = 0
+    });
+
+    test('planes normalise and measure signed distance', () {
+      final plane = Plane.pointNormal(Vector3(0, 0, 5), Vector3(0, 0, 2));
+      _expectVec(plane.normal, 0, 0, 1);
+      expect(plane.distanceTo(Vector3(0, 0, 8)), _near(3));
+      expect(plane.distanceToXYZ(0, 0, 2), _near(-3));
+      final scaled = Plane()..setCoefficients(0, 2, 0, -4);
+      _expectVec(scaled.normal, 0, 1, 0);
+      expect(scaled.constant, _near(-2));
     });
 
     test('crossInto matches cross and tolerates aliasing', () {

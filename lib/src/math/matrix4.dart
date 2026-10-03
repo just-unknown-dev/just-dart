@@ -115,7 +115,9 @@ extension JustMatrix4 on Matrix4 {
   }
 
   /// Write [input] as a point (w = 1) transformed by this into [out],
-  /// with the perspective divide. Safe when `out == input`.
+  /// with the perspective divide. A point that lands on w = 0 (the camera
+  /// plane of a perspective matrix) has no finite image and is written
+  /// undivided. Safe when `out == input`.
   void transformPointInto(Vector3 input, Vector3 out) {
     final m = storage;
     final x = input.x, y = input.y, z = input.z;
@@ -160,6 +162,7 @@ extension JustMatrix4 on Matrix4 {
     double near,
     double far,
   ) {
+    assert(right != left && bottom != top && far != near, 'empty view box');
     final m = storage;
     final rl = 1.0 / (right - left);
     final bt = 1.0 / (bottom - top);
@@ -185,12 +188,17 @@ extension JustMatrix4 on Matrix4 {
   /// Perspective projection into the engine's clip space for a camera
   /// looking down +Z with +Y down: vertical field of view [fovY] (radians),
   /// [aspect] = width / height, depth [near] → 0 and [far] → 1.
+  ///
+  /// Needs `0 < fovY < π`, `aspect > 0` and `0 < near < far`.
   void setPerspectiveYDown(
     double fovY,
     double aspect,
     double near,
     double far,
   ) {
+    assert(fovY > 0 && fovY < math.pi, 'fovY must be in (0, π): $fovY');
+    assert(aspect > 0, 'aspect must be positive: $aspect');
+    assert(near > 0 && far > near, 'needs 0 < near < far: $near, $far');
     final m = storage;
     final f = 1.0 / math.tan(fovY * 0.5);
     final range = far / (far - near);

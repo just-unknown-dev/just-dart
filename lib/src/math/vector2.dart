@@ -5,6 +5,11 @@ import 'dart:math' as math;
 import 'package:flutter/painting.dart' show Offset;
 
 /// A mutable 2-D vector.
+///
+/// The in-place methods ([add], [addScaled], [normalize], ...) never
+/// allocate; the operators and [normalized] / [perpendicular] return new
+/// vectors. Equality compares components exactly, and because the value is
+/// mutable, a vector must not change while it is a key in a set or map.
 class Vector2 {
   /// X component.
   double x;
@@ -111,7 +116,8 @@ class Vector2 {
 
   // ── In-place transforms ─────────────────────────────────────────────────
 
-  /// Normalise in-place. Returns the original length.
+  /// Normalise in-place. Returns the original length; a (near-)zero vector
+  /// is left unchanged.
   double normalize() {
     final len = length;
     if (len > 1e-9) {
@@ -131,10 +137,13 @@ class Vector2 {
 
   // ── Factory helpers (return new allocation — use sparingly) ─────────────
 
-  /// Return a new perpendicular Vec2 without mutating [this].
+  /// Return a new perpendicular vector `(-y, x)` without mutating [this].
   Vector2 perpendicular() => Vector2(-y, x);
 
   /// Return a normalised copy without mutating [this].
+  ///
+  /// A (near-)zero vector has no direction; it gives the unit x axis
+  /// `(1, 0)`, unlike [normalize], which leaves it at zero.
   Vector2 normalized() {
     final len = length;
     if (len > 1e-9) {
@@ -144,11 +153,19 @@ class Vector2 {
     return Vector2(1, 0);
   }
 
-  /// Create an operator-based copy.
+  /// A new vector `this + other`.
   Vector2 operator +(Vector2 other) => Vector2(x + other.x, y + other.y);
+
+  /// A new vector `this - other`.
   Vector2 operator -(Vector2 other) => Vector2(x - other.x, y - other.y);
+
+  /// A new vector scaled by [s].
   Vector2 operator *(double s) => Vector2(x * s, y * s);
+
+  /// A new vector divided by [s].
   Vector2 operator /(double s) => Vector2(x / s, y / s);
+
+  /// A new, negated vector.
   Vector2 operator -() => Vector2(-x, -y);
 
   @override
@@ -160,5 +177,5 @@ class Vector2 {
   int get hashCode => Object.hash(x, y);
 
   @override
-  String toString() => 'Vec2($x, $y)';
+  String toString() => 'Vector2($x, $y)';
 }

@@ -6,13 +6,18 @@
 /// pressure.
 ///
 /// The z-axis is ignored by the 2-D Canvas renderer (use [toOffset] to project
-/// to XY). It carries depth/world-Z for future 3-D rendering.
+/// to XY). It carries depth/world-Z for 3-D work.
 library;
 
 import 'dart:math' as math;
 import 'package:flutter/painting.dart' show Offset;
 
 /// A mutable 3-D vector.
+///
+/// The in-place methods ([add], [addScaled], [crossInto], [normalize], ...)
+/// never allocate; the operators, [cross] and [normalized] return new
+/// vectors. Equality compares components exactly, and because the value is
+/// mutable, a vector must not change while it is a key in a set or map.
 class Vector3 {
   /// X component.
   double x;
@@ -142,7 +147,8 @@ class Vector3 {
   /// Distance to [other].
   double distanceTo(Vector3 other) => math.sqrt(distanceToSquared(other));
 
-  /// Normalise in-place. Returns the original length.
+  /// Normalise in-place. Returns the original length; a (near-)zero vector
+  /// is left unchanged.
   double normalize() {
     final len = length;
     if (len > 1e-9) {
@@ -155,6 +161,9 @@ class Vector3 {
   }
 
   /// Return a normalised copy without mutating [this].
+  ///
+  /// A (near-)zero vector has no direction; it gives the unit x axis
+  /// `(1, 0, 0)`, unlike [normalize], which leaves it at zero.
   Vector3 normalized() {
     final len = length;
     if (len > 1e-9) {
@@ -164,12 +173,21 @@ class Vector3 {
     return Vector3(1, 0, 0);
   }
 
+  /// A new vector `this + other`.
   Vector3 operator +(Vector3 other) =>
       Vector3(x + other.x, y + other.y, z + other.z);
+
+  /// A new vector `this - other`.
   Vector3 operator -(Vector3 other) =>
       Vector3(x - other.x, y - other.y, z - other.z);
+
+  /// A new vector scaled by [s].
   Vector3 operator *(double s) => Vector3(x * s, y * s, z * s);
+
+  /// A new vector divided by [s].
   Vector3 operator /(double s) => Vector3(x / s, y / s, z / s);
+
+  /// A new, negated vector.
   Vector3 operator -() => Vector3(-x, -y, -z);
 
   @override
@@ -181,5 +199,5 @@ class Vector3 {
   int get hashCode => Object.hash(x, y, z);
 
   @override
-  String toString() => 'Vec3($x, $y, $z)';
+  String toString() => 'Vector3($x, $y, $z)';
 }

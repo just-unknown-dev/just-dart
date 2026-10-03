@@ -35,12 +35,12 @@ This project follows our [Code of Conduct](CODE_OF_CONDUCT.md). By participating
    ```
 3. **Install dependencies:**
    ```bash
-   dart pub get
+   flutter pub get
    ```
 4. **Run tests and analysis** to make sure everything is green before you start:
    ```bash
-   dart test
-   dart analyze
+   flutter test
+   flutter analyze
    ```
 
 ---
@@ -57,14 +57,14 @@ When opening a bug report, include:
 - A clear, descriptive title.
 - Steps to reproduce the problem.
 - Expected vs. actual behavior.
-- Dart SDK version (`dart --version`).
+- Flutter and Dart versions (`flutter --version`) and the platform (including web: dart2js or dart2wasm).
 - A minimal code sample or link to a reproduction repo if possible.
 
 ### Suggesting Features
 
 - Open a [GitHub Discussion](../../discussions) or issue labeled **`enhancement`**.
 - Describe the problem your feature solves and how you'd like it to behave.
-- Check that the feature aligns with the package scope (shared, framework-agnostic Dart utilities for Just engine packages).
+- Check that the feature aligns with the package scope (allocation-free math shared by the Just engine packages).
 
 ### Submitting a Pull Request
 
@@ -74,10 +74,11 @@ When opening a bug report, include:
    ```
 2. Make your changes, following the [Coding Guidelines](#coding-guidelines).
 3. Add or update tests for any changed behavior.
-4. Ensure all tests pass:
+4. Ensure all tests pass and the code is formatted:
    ```bash
-   dart test
-   dart analyze
+   flutter test
+   flutter analyze
+   dart format .
    ```
 5. Commit with a [conventional commit message](#commit-message-convention).
 6. Push to your fork and open a Pull Request against `main`.
@@ -92,20 +93,25 @@ When opening a bug report, include:
 
 | Tool | Minimum Version | Recommended Version |
 |------|------------------|---------------------|
-| Dart SDK | 3.11.0 | 3.11.x |
+| Dart SDK | 3.11.0 | latest stable |
+| Flutter | 3.41.0 | latest stable |
 
-`just_dart` is a pure-Dart package with no Flutter runtime APIs.
+`just_dart` depends on Flutter for `Offset` and `Rect` (`dart:ui`), so use
+the `flutter` tool rather than plain `dart` for pub and tests. Keep the code
+free of `dart:io`, `dart:html` and `dart:js`: the package must keep working
+on every platform, including the web under dart2js and dart2wasm.
 If you're working from this monorepo, run commands from `packages/just_dart`.
 
 ```bash
 # Fetch dependencies
-dart pub get
+flutter pub get
 
 # Run tests
-dart test
+flutter test
 
-# Analyze
-dart analyze
+# Analyze and format
+flutter analyze
+dart format .
 ```
 
 ---

@@ -9,7 +9,8 @@ import 'vector3.dart';
 ///
 /// The side the normal points to is "in front": [distanceTo] is positive
 /// there. The normal is kept unit length by the constructors and
-/// [normalize].
+/// [normalize]; a zero normal cannot be normalised and is left as is, which
+/// makes [distanceTo] return [constant] everywhere.
 class Plane {
   /// Unit normal.
   final Vector3 normal;

@@ -12,8 +12,8 @@ import 'vector3.dart';
 /// Built from a view-projection matrix into the engine's clip space
 /// (x, y in −1..1, depth 0..1 — see `JustMatrix4`).
 class Frustum {
-  /// Left, right, top, bottom, near, far.
-  final List<Plane> planes = List.generate(6, (_) => Plane());
+  /// Left, right, top, bottom, near, far (a fixed-length list).
+  final List<Plane> planes = List.generate(6, (_) => Plane(), growable: false);
 
   /// An empty-bounded frustum; call [setFromViewProjection].
   Frustum();
@@ -36,8 +36,8 @@ class Frustum {
 
   /// Whether [p] is inside (on a plane counts).
   bool containsPoint(Vector3 p) {
-    for (final plane in planes) {
-      if (plane.distanceTo(p) < 0.0) return false;
+    for (var i = 0; i < 6; i++) {
+      if (planes[i].distanceTo(p) < 0.0) return false;
     }
     return true;
   }
@@ -46,7 +46,8 @@ class Frustum {
   /// corner may pass without truly overlapping, never the reverse.
   bool intersectsAabb(Aabb3 box) {
     if (box.isEmpty) return false;
-    for (final plane in planes) {
+    for (var i = 0; i < 6; i++) {
+      final plane = planes[i];
       final n = plane.normal;
       // The box corner furthest along the plane's normal.
       final px = n.x >= 0 ? box.max.x : box.min.x;

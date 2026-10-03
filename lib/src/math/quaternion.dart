@@ -336,14 +336,17 @@ class Quaternion {
     final m10 = 2.0 * (x * y + z * w);
     final m11 = 1.0 - 2.0 * (xx + zz);
     final sx = -m12;
+    // cos x from a whole row: unlike asin(sx), it stays exact near ±90°.
+    final cx = math.sqrt(m10 * m10 + m11 * m11);
     double ex, ey, ez;
-    if (sx.abs() < 0.9999999) {
-      ex = math.asin(sx.clamp(-1.0, 1.0));
+    if (cx > 1e-8) {
+      ex = math.atan2(sx, cx);
       ey = math.atan2(m02, m22);
       ez = math.atan2(m10, m11);
     } else {
       // Gimbal lock (x = ±90°): only y ∓ z is defined. Keep the hint's z
-      // (0 without one) and solve y from it.
+      // (0 without one) and solve y from it. Below this cos x, rounding in
+      // the matrix moves y and z more than snapping x to ±90° does.
       final m00 = 1.0 - 2.0 * (yy + zz);
       final m20 = 2.0 * (x * z - y * w);
       final s = sx > 0 ? 1.0 : -1.0;
@@ -396,6 +399,9 @@ class Quaternion {
 
   // ── Object ──────────────────────────────────────────────────────────────
 
+  /// Exact component equality: `q` and `-q` are the same rotation but not
+  /// equal (use [sameRotation]). The value is mutable, so a quaternion
+  /// must not change while it is a key in a set or map.
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -409,5 +415,5 @@ class Quaternion {
   int get hashCode => Object.hash(x, y, z, w);
 
   @override
-  String toString() => 'Quat($x, $y, $z, $w)';
+  String toString() => 'Quaternion($x, $y, $z, $w)';
 }
