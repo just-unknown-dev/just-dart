@@ -10,7 +10,7 @@ import 'vector3.dart';
 /// The six planes bounding what a camera sees, each facing inwards.
 ///
 /// Built from a view-projection matrix into the engine's clip space
-/// (x, y in −1..1, depth 0..1 — see `JustMatrix4`).
+/// (x, y in −1..1, depth 0..1 — see `Matrix4Transforms`).
 class Frustum {
   /// Left, right, top, bottom, near, far (a fixed-length list).
   final List<Plane> planes = List.generate(6, (_) => Plane(), growable: false);

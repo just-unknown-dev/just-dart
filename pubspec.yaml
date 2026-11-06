@@ -1,6 +1,6 @@
 name: just_dart
-description: "Allocation-free math for Flutter games: mutable Vector2, Vector3 and Quaternion, Matrix4 helpers, Aabb3, Ray3, Plane, Frustum culling and a Quadtree."
-version: 0.2.0
+description: "Allocation-free math for Flutter games: mutable Vector2, Vector3 and Quaternion, Matrix4 transforms, Aabb3, Ray3D, Plane, Frustum culling and 2-D broad phases."
+version: 0.3.0
 homepage: https://engine.justunknown.com/
 repository: https://github.com/just-unknown-dev/just-dart
 issue_tracker: https://github.com/just-unknown-dev/just-dart/issues

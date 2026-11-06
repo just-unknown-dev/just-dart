@@ -1,29 +1,16 @@
 # Just Dart
 
-Allocation-free math for Flutter games, shared by the Just engine packages.
-Every type is mutable and works in place, so code that runs every frame
-(physics, particles, culling, picking) doesn't add garbage-collection
-pressure.
+Allocation-free math for Flutter games, shared by the Just engine packages. Every type is mutable and works in place, so code that runs every frame (physics, particles, culling, picking) doesn't add garbage-collection pressure.
 
 ## Features
 
-- **`Vector2` / `Vector3`**: mutable vectors with in-place arithmetic
-  (`add`, `addScaled`, `normalize`, `crossInto`, ...) and `Offset`
-  conversions for `Canvas`.
-- **`Quaternion`**: 3-D rotations with axis-angle, slerp, vector rotation
-  and Euler angles that round-trip the values an inspector shows.
-- **`Matrix4`**: the same `vector_math` 64-bit class that Flutter exports,
-  so the name never clashes. The `JustMatrix4` extension adds
-  translate-rotate-scale builders, products, point and direction
-  transforms, and y-down orthographic and perspective projections.
-- **`Aabb3`, `Ray3`, `Plane`, `Frustum`**: bounds, picking rays and view
-  frustum culling.
-- **`Quadtree<T>`**: a 2-D broad phase that answers "what overlaps this
-  rectangle?" queries.
+- **`Vector2` / `Vector3`**: mutable vectors with in-place arithmetic (`add`, `addScaled`, `normalize`, `crossInto`, ...) and `Offset` conversions for `Canvas`.
+- **`Quaternion`**: 3-D rotations with axis-angle, slerp, vector rotation and Euler angles that round-trip the values an inspector shows.
+- **`Matrix4`**: the same `vector_math` 64-bit class that Flutter exports, so the name never clashes. The `Matrix4Transforms` extension adds translate-rotate-scale builders, products, point and direction transforms, and y-down orthographic and perspective projections.
+- **`Aabb3`, `Ray3D`, `Plane`, `Frustum`**: bounds, picking rays and view frustum culling.
+- **`Quadtree<T>` and `SpatialHashGrid<T>`**: 2-D broad phases that answer "what overlaps this rectangle?" queries.
 
-Runs on Android, iOS, macOS, Windows, Linux and the web, compiled with
-dart2js or dart2wasm. The package needs Flutter, because it uses `Offset`
-and `Rect` from `dart:ui`.
+Runs on Android, iOS, macOS, Windows, Linux and the web, compiled with dart2js or dart2wasm. The package needs Flutter, because it uses `Offset` and `Rect` from `dart:ui`.
 
 ## Getting started
 
@@ -39,19 +26,12 @@ import 'package:just_dart/just_dart.dart';
 
 ## Conventions
 
-- **Axes:** x right, **y down**, z into the screen. A positive turn about Z
-  carries +X towards +Y, which is clockwise on screen, the same as
-  `Canvas.rotate`.
-- **Euler angles:** `q = qY · qX · qZ`, so Z is applied first, then X,
-  then Y (Unity's order). A 2-D rotation is `(0, 0, angle)`.
-- **Clip space:** x and y both run −1..1 (y down), and depth runs 0 (near)
-  to 1 (far).
-- **`Matrix4` storage** is column-major: element (row r, column c) is
-  `storage[c * 4 + r]`.
-- **Output parameters:** methods that take an `out` parameter write into it
-  instead of allocating, and accept `out` being one of the inputs.
-- **Equality** compares components exactly. The values are mutable, so
-  don't change a vector or quaternion while it's a key in a `Set` or `Map`.
+- **Axes:** x right, **y down**, z into the screen. A positive turn about Z carries +X towards +Y, which is clockwise on screen, the same as `Canvas.rotate`.
+- **Euler angles:** `q = qY · qX · qZ`, so Z is applied first, then X, then Y (Unity's order). A 2-D rotation is `(0, 0, angle)`.
+- **Clip space:** x and y both run −1..1 (y down), and depth runs 0 (near) to 1 (far).
+- **`Matrix4` storage** is column-major: element (row r, column c) is `storage[c * 4 + r]`.
+- **Output parameters:** methods that take an `out` parameter write into it instead of allocating, and accept `out` being one of the inputs.
+- **Equality** compares components exactly. The values are mutable, so don't change a vector or quaternion while it's a key in a `Set` or `Map`.
 
 ## Usage
 
@@ -102,7 +82,7 @@ if (frustum.intersectsAabb(bounds)) {
   // draw it
 }
 
-final ray = Ray3()..setValues(0, 0, -10, 0, 0, 1);
+final ray = Ray3D()..setValues(0, 0, -10, 0, 0, 1);
 final t = ray.intersectAabb(bounds); // distance along the ray, or null
 final ground = ray.intersectZ(); // where it crosses the z = 0 plane
 ```
@@ -124,16 +104,28 @@ tree.queryRect(const Rect.fromLTWH(0, 0, 80, 80), nearby);
 print(nearby); // [player, enemy_1]
 ```
 
-The tree stores each item once, so a query never returns an item twice.
-Rectangles are captured when they're inserted: to move items, `clear()`
-the tree and insert them again.
+The tree stores each item once, so a query never returns an item twice. Rectangles are captured when they're inserted: to move items, `clear()` the tree and insert them again.
+
+### Spatial hash grid
+
+```dart
+final grid = SpatialHashGrid<String>(cellSize: 64);
+grid.insert('wall', const Rect.fromLTWH(0, 0, 32, 128));
+grid.update('wall', const Rect.fromLTWH(16, 0, 32, 128)); // moves it
+
+final hits = grid.query(const Rect.fromLTWH(10, 10, 50, 50)); // {wall}
+final near = grid.queryRadius(const Offset(20, 20), 40);
+```
+
+A uniform grid suits many items of similar size that move every frame: `update` moves one item without rebuilding anything. An item or a query far larger than a cell is checked directly instead of cell by cell, and bounds that aren't finite throw `ArgumentError`.
+
+## Names
+
+Math value types keep `vector_math`'s digit, which counts components or dimensions: `Vector2`, `Vector3`, `Matrix4`, `Aabb3`. A type that has a 2-D twin elsewhere in the engine takes the engine's `2D`/`3D` tag instead, so the pair reads as one concept: `Ray3D` here, beside the physics package's `Ray2D`. `Plane` and `Frustum` are three-dimensional by definition, and `Quadtree` and `SpatialHashGrid` two-dimensional, so they carry neither.
 
 ## Using it alongside `vector_math`
 
-`Matrix4` is `vector_math`'s own class, so the two packages never disagree
-about it. However, `vector_math` also defines `Vector2`, `Vector3`,
-`Quaternion`, `Aabb3`, `Plane` and `Frustum`. If a file imports both
-packages, prefix one of them:
+`Matrix4` is `vector_math`'s own class, so the two packages never disagree about it. However, `vector_math` also defines `Vector2`, `Vector3`, `Quaternion`, `Aabb3`, `Plane` and `Frustum`. If a file imports both packages, prefix one of them:
 
 ```dart
 import 'package:just_dart/just_dart.dart';
@@ -146,12 +138,13 @@ import 'package:vector_math/vector_math_64.dart' as vm;
 | --- | --- |
 | `Vector2`, `Vector3` | Mutable vectors |
 | `Quaternion` | Rotations and Euler angles |
-| `Matrix4`, `JustMatrix4` | 4×4 transforms and projections |
+| `Matrix4`, `Matrix4Transforms` | 4×4 transforms and projections |
 | `Aabb3` | Axis-aligned bounding boxes |
-| `Ray3` | Rays for picking (plane, z-plane and box hits) |
+| `Ray3D` | Rays for picking (plane, z-plane and box hits) |
 | `Plane` | Signed-distance planes |
 | `Frustum` | View frustum culling |
-| `Quadtree<T>` | 2-D rectangle broad phase |
+| `Quadtree<T>` | 2-D rectangle broad phase (a tree) |
+| `SpatialHashGrid<T>` | 2-D rectangle broad phase (a uniform grid) |
 
 Everything is exported from `package:just_dart/just_dart.dart`.
 

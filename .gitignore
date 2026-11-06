@@ -8,3 +8,6 @@ pubspec.lock
 
 # Avoid committing build outputs; see
 build/
+
+# Local path overrides for the monorepo; never published or committed.
+pubspec_overrides.yaml

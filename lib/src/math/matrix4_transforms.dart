@@ -15,7 +15,8 @@ import 'package:vector_math/vector_math_64.dart' show Matrix4;
 import 'quaternion.dart';
 import 'vector3.dart';
 
-/// Engine-side operations on [Matrix4].
+/// Transforms on [Matrix4]: translate-rotate-scale builders, products,
+/// point and direction transforms, and the engine's projections.
 ///
 /// Element (row r, column c) lives at `storage[c * 4 + r]`.
 ///
@@ -25,7 +26,7 @@ import 'vector3.dart';
 /// depth **0 (near) .. 1 (far)**. [setOrthographicYDown] and
 /// [setPerspectiveYDown] build projections into it; a rendering backend with
 /// a different convention applies its own fix-up matrix once.
-extension JustMatrix4 on Matrix4 {
+extension Matrix4Transforms on Matrix4 {
   /// Set to the transform that scales by [s], then rotates by [q], then
   /// translates by [p] (`T · R · S`).
   void setFromTrs(Vector3 p, Quaternion q, Vector3 s) {

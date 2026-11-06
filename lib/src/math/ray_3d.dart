@@ -5,11 +5,12 @@ import 'aabb3.dart';
 import 'plane.dart';
 import 'vector3.dart';
 
-/// A half-line from [origin] along [direction].
+/// A half-line from [origin] along [direction]: the 3-D twin of the
+/// engine's `Ray2D`.
 ///
 /// [direction] need not be unit length; `t` values are in units of it, so
 /// with a unit direction `t` is a distance.
-class Ray3 {
+class Ray3D {
   /// Start point.
   final Vector3 origin;
 
@@ -17,10 +18,10 @@ class Ray3 {
   final Vector3 direction;
 
   /// A ray from the origin along +Z (into the screen).
-  Ray3() : origin = Vector3.zero(), direction = Vector3(0, 0, 1);
+  Ray3D() : origin = Vector3.zero(), direction = Vector3(0, 0, 1);
 
   /// A ray from [origin] along [direction] (both copied).
-  Ray3.originDirection(Vector3 origin, Vector3 direction)
+  Ray3D.originDirection(Vector3 origin, Vector3 direction)
     : origin = Vector3.copy(origin),
       direction = Vector3.copy(direction);
 
@@ -38,7 +39,7 @@ class Ray3 {
   }
 
   /// Set to [other].
-  void setFrom(Ray3 other) {
+  void setFrom(Ray3D other) {
     origin.setFrom(other.origin);
     direction.setFrom(other.direction);
   }
@@ -99,5 +100,5 @@ class Ray3 {
   }
 
   @override
-  String toString() => 'Ray3($origin → $direction)';
+  String toString() => 'Ray3D($origin → $direction)';
 }

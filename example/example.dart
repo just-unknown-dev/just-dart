@@ -46,6 +46,12 @@ void main() {
   );
 
   // Pick: where does a ray from the camera hit the box?
-  final ray = Ray3()..setValues(0, 0, 0, 0, 0, 1);
+  final ray = Ray3D()..setValues(0, 0, 0, 0, 0, 1);
   print('ray hits the box at t=${ray.intersectAabb(ahead)}');
+
+  // A uniform grid for items of similar size that move often.
+  final grid = SpatialHashGrid<String>(cellSize: 32)
+    ..insert('coin', const Rect.fromLTWH(40, 40, 8, 8))
+    ..insert('spike', const Rect.fromLTWH(200, 40, 16, 8));
+  print('near the player: ${grid.queryRadius(const Offset(30, 30), 20)}');
 }

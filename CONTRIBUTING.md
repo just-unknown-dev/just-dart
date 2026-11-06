@@ -96,11 +96,7 @@ When opening a bug report, include:
 | Dart SDK | 3.11.0 | latest stable |
 | Flutter | 3.41.0 | latest stable |
 
-`just_dart` depends on Flutter for `Offset` and `Rect` (`dart:ui`), so use
-the `flutter` tool rather than plain `dart` for pub and tests. Keep the code
-free of `dart:io`, `dart:html` and `dart:js`: the package must keep working
-on every platform, including the web under dart2js and dart2wasm.
-If you're working from this monorepo, run commands from `packages/just_dart`.
+`just_dart` depends on Flutter for `Offset` and `Rect` (`dart:ui`), so use the `flutter` tool rather than plain `dart` for pub and tests. Keep the code free of `dart:io`, `dart:html` and `dart:js`: the package must keep working on every platform, including the web under dart2js and dart2wasm. If you're working from this monorepo, run commands from `packages/just_dart`.
 
 ```bash
 # Fetch dependencies
